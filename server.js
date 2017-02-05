@@ -2,6 +2,8 @@ var express    = require('express');
 var parserBody = require('body-parser');
 var _          = require('underscore');
 
+var db         = require('./db.js');
+
 var app        = express();
 var PORT       = process.env.PORT || 3000;
 
@@ -18,8 +20,13 @@ app.get('/todos',function(req,res){
    if (query.hasOwnProperty('completed')){
    	    var _value = JSON.parse(query.completed);
    	    if (_.isBoolean(_value)){
-   	    	result = _.where(todos,{completed: _value});
+   	    	result = _.where(result,{completed: _value});
    	    }
+   }
+   if (query.hasOwnProperty('q') && _.isString(query.q)){
+   	result = _.filter(result,function(value){
+   		return (value.description.indexOf(query.q) >= 0);
+   	});
    }
    res.json(result);
 });
@@ -58,16 +65,24 @@ app.put('/todos/:id',function(req,res){
 });
 
 app.post('/todos',function(req,res){
-	var obj = req.body;
-	if (!_.isString(obj.description) || !obj.description.trim() || !_.isBoolean(obj.completed))
-		return res.status(400).send();
-    obj.id           = (todoNextId++);
-    var norm         = _.pick(obj,'id','description','completed');
-    norm.description = obj.description.trim();
-    todos.push(norm);
-    return res.status(200).json(norm).send();
+  db.todo.create(req.body).then(function(item){
+     res.json(_.pick(item.toJSON(),'id','description','completed'));
+  }).catch(function(error){
+    res.status(400).json(error);
+  });
 });
 
-app.listen(PORT,function(){
-	console.log('Listening on PORT : ' + PORT);
+
+
+db.sequelize.sync()
+.then(function(connection){
+  console.log('db connection ok , stand by for listed...');
+  return app.listen(PORT,function(success){
+     console.log('Listening on PORT : ' + PORT);
+  });
+})
+.catch(function(error){
+  onsole.log('ERROR : ' + error);
 });
+
+
