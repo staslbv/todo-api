@@ -13,7 +13,15 @@ var todoNextId = 1;
 
 // GET
 app.get('/todos',function(req,res){
-   res.json(todos);
+   var query  = req.query;
+   var result = todos;
+   if (query.hasOwnProperty('completed')){
+   	    var _value = JSON.parse(query.completed);
+   	    if (_.isBoolean(_value)){
+   	    	result = _.where(todos,{completed: _value});
+   	    }
+   }
+   res.json(result);
 });
 
 app.get('/todos/:id',function(req,res){
