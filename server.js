@@ -16,19 +16,29 @@ var todoNextId = 1;
 // GET
 app.get('/todos',function(req,res){
    var query  = req.query;
-   var result = todos;
+   var where  = {};
+   var filter = undefined;
    if (query.hasOwnProperty('completed')){
    	    var _value = JSON.parse(query.completed);
-   	    if (_.isBoolean(_value)){
-   	    	result = _.where(result,{completed: _value});
-   	    }
-   }
-   if (query.hasOwnProperty('q') && _.isString(query.q)){
-   	result = _.filter(result,function(value){
-   		return (value.description.indexOf(query.q) >= 0);
-   	});
-   }
-   res.json(result);
+   	    if (_.isBoolean(_value)) where.completed = _value;
+  }
+  if (query.hasOwnProperty('q') && _.isString(query.q)){
+     where.description =  {
+       $like: ('%' + query.q + '%')
+     }
+  } 
+  if (_.keys(where).length > 0)  filter = {where: where};
+  db.todo.findAll(filter)
+  .then(function(result){
+     var va = [];
+     result.forEach(function(_result){
+      va.push(_result.toJSON());
+     });
+     res.json(va);
+  })
+  .catch(function(error){
+    res.status(400).json(error);
+  });
 });
 
 app.get('/todos/:id',function(req,res){
