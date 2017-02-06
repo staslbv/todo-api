@@ -10,9 +10,6 @@ var PORT       = process.env.PORT || 3000;
 // req.body will be always object
 app.use(parserBody.json());
 
-var todos      = [];
-var todoNextId = 1;
-
 // GET
 app.get('/todos',function(req,res){
    var query  = req.query;
@@ -42,36 +39,32 @@ app.get('/todos',function(req,res){
 });
 
 app.get('/todos/:id',function(req,res){
-   var pid = parseInt(req.params.id,10);
-   var va  = _.findWhere(todos,{id: pid});
-   if (!va)
-      return res.status(404).send();	
-   res.json(va); 	
+  db.todo.findById(parseInt(req.params.id,10)).then(function(item){
+    if (item)
+      res.json(item.toJSON());
+    else
+      res.status(403).json({});
+  }).catch(function(error){
+    res.status(400).json(error);
+  });
+   
 });
 
 app.delete('/todos/:id',function(req,res){
    var pid = parseInt(req.params.id,10);
-   var va  = _.findWhere(todos,{id: pid});
-   if (!va) return res.status(404).send();
-   todos   = _.without(todos,va);
-   res.json(va);
-});
-
-app.put('/todos/:id',function(req,res){
-   var body            = _.pick(req.body, 'description','completed');
-   var validAttrinutes = {};
-   var pid             = parseInt(req.params.id,10);
-   var va              = _.findWhere(todos,{id: pid});
-   if (body.hasOwnProperty('completed') && _.isBoolean(body.completed))
-   	   validAttrinutes.completed = body.completed;
-   if (body.hasOwnProperty('description') && _.isString(body.description) && _.isString(body.description.trim()))
-   	   validAttrinutes.description = body.description.trim();
-   if (!_.keys(validAttrinutes).length)
-   	   return res.status(204).send();
-   if (!va)   
-   	   return res.status(404).send();
-   _.extend(va,validAttrinutes);
-   res.json(va);
+   db.todo.findById(pid)
+   .then(function(item){
+    if (!item)
+       res.status(404).json({});
+    else
+      return db.todo.destroy({where:{id: item.id}});
+   })
+   .then(function(success){
+     res.json({id: pid});
+   })
+   .catch(function(error){
+     res.status(400).json(error);
+   });
 });
 
 app.post('/todos',function(req,res){
@@ -82,6 +75,29 @@ app.post('/todos',function(req,res){
   });
 });
 
+app.put('/todos/:id',function(req,res){
+  
+   var body            = _.pick(req.body, 'description','completed');
+   var validAttrinutes = {};
+   var pid             = parseInt(req.params.id,10);
+   //
+   db.todo.findById(pid)
+   .then(function(item){
+    if (!item){
+      res.status(404).json({});
+    }else{
+      var _item = _.extend(item.toJSON(),body);
+     _item.id   = pid;
+      return db.todo.upsert(_item);
+    }
+   })
+   .then(function(success){
+      res.json({success: success});
+   })
+   .catch(function(error){
+     res.status(400).json(error);
+   });
+});
 
 
 db.sequelize.sync()
@@ -94,5 +110,4 @@ db.sequelize.sync()
 .catch(function(error){
   onsole.log('ERROR : ' + error);
 });
-
 
