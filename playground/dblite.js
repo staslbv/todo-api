@@ -5,11 +5,12 @@ var FLAG_START_FROM_SCRATCH = true;
 
 var Sequelize = require('sequelize');
 
-var env       = (process.env.NODE_ENV || 'development');
+//var env       = (process.env.NODE_ENV || 'development');
+
 
 var sequelize;
 
-if (env == 'production'){ // only on heroku
+if (process.env.NODE_ENV == 'production'){ // only on heroku
     sequelize = new Sequelize(undefined,undefined,process.env.DATABASE_URL,{
     	dialect: 'postgres'
     });
