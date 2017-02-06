@@ -100,6 +100,14 @@ app.put('/todos/:id',function(req,res){
 });
 
 
+app.post('/users',function(req,res){
+  db.users.create(_.pick(req.body,'email','password')).then(function(user){
+    res.json(user.toJSON());
+  }).catch(function(e){
+    res.status(400).json(e);
+  });
+});
+
 db.sequelize.sync()
 .then(function(connection){
   console.log('db connection ok , stand by for listed...');
