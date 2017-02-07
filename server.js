@@ -1,11 +1,14 @@
 var express    = require('express');
 var parserBody = require('body-parser');
 var _          = require('underscore');
+var bcrypt     = require('bcryptjs');
 
 var db         = require('./db.js');
 
 var app        = express();
 var PORT       = process.env.PORT || 3000;
+
+
 
 // req.body will be always object
 app.use(parserBody.json());
@@ -100,15 +103,27 @@ app.put('/todos/:id',function(req,res){
 });
 
 
-app.post('/users',function(req,res){
-  db.users.create(_.pick(req.body,'email','password')).then(function(user){
-    res.json(user.toJSON());
+app.post('/users',function(req,res)
+{
+  db.users.create(_.pick(req.body,'email','password')).then(function(user)
+  {
+
+    res.json(user.toPublicJSON());
   }).catch(function(e){
     res.status(400).json(e);
   });
 });
 
-db.sequelize.sync()
+app.post('/users/login', function(req,res){
+  db.users.authenticate(req.body).then(function(user){
+    res.json(user.toPublicJSON());
+  },function(e){
+    res.status(401).send();
+  });
+});
+
+// initialize sequelize sync
+db.sequelize.sync({force: true})
 .then(function(connection){
   console.log('db connection ok , stand by for listed...');
   return app.listen(PORT,function(success){
