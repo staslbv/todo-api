@@ -30,7 +30,7 @@ app.get('/todos',middleware.requireAuthentication, function(req,res){
      }
   } 
   if (_.keys(where).length > 0)  filter = {where: where};
-  db.todo.findAll(filter)
+  req.user.getTodos(filter) // except findAll
   .then(function(result){
      var va = [];
      result.forEach(function(_result){
@@ -44,11 +44,19 @@ app.get('/todos',middleware.requireAuthentication, function(req,res){
 });
 
 app.get('/todos/:id', middleware.requireAuthentication, function(req,res){
-  db.todo.findById(parseInt(req.params.id,10)).then(function(item){
-    if (item)
+   db.todo.findOne({
+     where: {
+       id: parseInt(req.params.id,10),
+       userId: req.user.id
+     }
+   }).then(function(item){
+  //db.todo.findById(parseInt(req.params.id,10)).then(function(item){
+    if (item){
       res.json(item.toJSON());
-    else
+    }
+    else{
       res.status(403).json({});
+    }
   }).catch(function(error){
     res.status(400).json(error);
   });
@@ -73,9 +81,19 @@ app.delete('/todos/:id', middleware.requireAuthentication, function(req,res){
 });
 
 app.post('/todos', middleware.requireAuthentication, function(req,res){
-  db.todo.create(req.body).then(function(item){
-     res.json(_.pick(item.toJSON(),'id','description','completed'));
-  }).catch(function(error){
+  var _ref;
+  db.todo.create(req.body)
+  .then(function(e){
+     console.log('e1: ' + JSON.stringify( e.toJSON()));
+     return req.user.addTodo((_ref = e));
+  })
+  .then(function(e){
+     return _ref.reload();
+  })
+  .then(function(e){
+     res.json(e.toJSON());
+  })
+  .catch(function(error){
     res.status(400).json(error);
   });
 });
@@ -117,11 +135,32 @@ app.post('/users',function(req,res)
 });
 
 app.post('/users/login', function(req,res){
-  db.users.authenticate(req.body).then(function(user){
-    res.header('Auth',user.generateToken('authentication')).json(user.toPublicJSON());
-  },function(e){
-    res.status(401).send();
-  });
+  var userInstance;
+  var token;
+
+  db.users.authenticate(req.body)
+  .then(function(user){
+    userInstance = user;
+    token        = user.generateToken('authentication');
+    return db.token.create({token: token});
+   })
+  .then(function(tokenInstance){
+      res.header('Auth',tokenInstance.get('token')).json(userInstance.toPublicJSON());
+  })
+  .catch(function(e){
+     res.status(400).send();
+   });
+  
+});
+
+app.delete('/users/login', middleware.requireAuthentication, function(req,res){
+   req.token.destroy()
+   .then(function(e){
+    res.status(204).send();
+   })
+   .catch(function(e){
+     res.status(500).send();
+   })
 });
 
 // initialize sequelize sync

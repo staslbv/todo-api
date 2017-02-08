@@ -39,45 +39,33 @@ var Todo = sequelize.define('todo',{
 	}
 });
 
+var User = sequelize.define('user',{
+	email: Sequelize.STRING
+});
+
+Todo.belongsTo(User);
+User.hasMany(Todo);
+
+
+
 
 sequelize.sync({force: FLAG_START_FROM_SCRATCH}).then(function(connection){
 	console.log('got connection');
-	 Todo.create({description: 'N1'})
-	.then(function(va1)
-	{
-		console.log(va1.toJSON());
-		return Todo.create({description: 'N2'});
+	var _user;
+	User.create({email: "stas.lbv@gmail.com"})
+	.then(function (user){
+		_user = user;
+       return Todo.create({description: 'Walk the dog'});
 	})
-	.then(function(va2){
-		console.log(va2.toJSON());
-		return Todo.create({description: 'N3'});
-	})
-	.then(function(va3){
-		console.log(va3.toJSON());
-		//return Todo.findById(1000);
-		return Todo.findAll({
-			where:{
-				completed: false,
-				description:{
-					$like: '%n2%'
-				}
-			}
-		});
-	})
-	.then(function (result){
-		console.log('EVERYTHING DONE');
-		console.log(typeof result);
-		console.log(JSON.stringify(result));
-		if (_.isArray(result))
-			result.forEach(function(row){
-				console.log(row.toJSON());
-			});
-		
+	.then(function(todo){
+		console.log('created');
+       _user.addTodo(todo);
 	})
 	.catch(function(e){
-		console.log('ERROR: unable to create row! ' + e);
+
 	});
-}).catch(function(e){
-	console.log('ERROR: unable to connect! ' + e);
+	}
+).catch(function(e){
+
 });
 
