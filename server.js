@@ -5,6 +5,8 @@ var bcrypt     = require('bcryptjs');
 
 var db         = require('./db.js');
 
+var middleware = require('./middleware.js')(db);
+
 var app        = express();
 var PORT       = process.env.PORT || 3000;
 
@@ -14,7 +16,7 @@ var PORT       = process.env.PORT || 3000;
 app.use(parserBody.json());
 
 // GET
-app.get('/todos',function(req,res){
+app.get('/todos',middleware.requireAuthentication, function(req,res){
    var query  = req.query;
    var where  = {};
    var filter = undefined;
@@ -41,7 +43,7 @@ app.get('/todos',function(req,res){
   });
 });
 
-app.get('/todos/:id',function(req,res){
+app.get('/todos/:id', middleware.requireAuthentication, function(req,res){
   db.todo.findById(parseInt(req.params.id,10)).then(function(item){
     if (item)
       res.json(item.toJSON());
@@ -53,7 +55,7 @@ app.get('/todos/:id',function(req,res){
    
 });
 
-app.delete('/todos/:id',function(req,res){
+app.delete('/todos/:id', middleware.requireAuthentication, function(req,res){
    var pid = parseInt(req.params.id,10);
    db.todo.findById(pid)
    .then(function(item){
@@ -70,7 +72,7 @@ app.delete('/todos/:id',function(req,res){
    });
 });
 
-app.post('/todos',function(req,res){
+app.post('/todos', middleware.requireAuthentication, function(req,res){
   db.todo.create(req.body).then(function(item){
      res.json(_.pick(item.toJSON(),'id','description','completed'));
   }).catch(function(error){
@@ -78,7 +80,7 @@ app.post('/todos',function(req,res){
   });
 });
 
-app.put('/todos/:id',function(req,res){
+app.put('/todos/:id', middleware.requireAuthentication, function(req,res){
   
    var body            = _.pick(req.body, 'description','completed');
    var validAttrinutes = {};
